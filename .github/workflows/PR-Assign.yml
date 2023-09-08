@@ -28,7 +28,7 @@ jobs:
           -H "Accept: application/vnd.github+json" \
           -H "X-GitHub-Api-Version: 2022-11-28" \
           -d "{\"assignees\":[\"$AUTHOR\"]}" \
-          "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/assignees"
+          "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/assignees")
       
           # Check if the assignment was successful
           if [ "$(echo "$RESPONSE" | jq -r '.message')" == "Not Found" ]; then
