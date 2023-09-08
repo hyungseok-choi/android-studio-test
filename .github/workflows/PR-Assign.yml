@@ -1,0 +1,42 @@
+name: PR Assign
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+
+jobs:
+  assign-author:
+    runs-on: ubuntu-latest
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Assign PR author
+        run: |
+          # Get the PR author's username
+          AUTHOR=$(jq -r .pull_request.user.login $GITHUB_EVENT_PATH)
+
+          # Assign the PR to the author
+          curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
+          -d "{\"assignees\":[\"$AUTHOR\"]}" \
+          "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/assignees"
+
+      - name: Check assignment status
+        run: |
+          # Check if the assignment was successful
+          ASSIGNMENT_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X GET -H "Authorization: token $GITHUB_TOKEN" \
+          "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/assignees")
+
+          if [ $ASSIGNMENT_STATUS -eq 201 ]; then
+            echo "Assignment succeeded."
+          else
+            echo "Assignment failed with status code: $ASSIGNMENT_STATUS"
+            exit 1
+          fi
