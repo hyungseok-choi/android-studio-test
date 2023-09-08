@@ -22,21 +22,22 @@ jobs:
         run: |
           # Get the PR author's username
           AUTHOR=$(jq -r .pull_request.user.login $GITHUB_EVENT_PATH)
-
+      
           # Assign the PR to the author
-          curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
+          RESPONSE=$(curl -X POST -s -H "Authorization: token $GITHUB_TOKEN" \
+          -H "Accept: application/vnd.github.v3+json" \
+          -H "Content-Type: application/json" \
           -d "{\"assignees\":[\"$AUTHOR\"]}" \
-          "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/assignees"
-
-      - name: Check assignment status
-        run: |
-          # Check if the assignment was successful
-          ASSIGNMENT_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X GET -H "Authorization: token $GITHUB_TOKEN" \
           "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/assignees")
-
-          if [ $ASSIGNMENT_STATUS -eq 201 ]; then
+      
+          # Check if the assignment was successful
+          if [ "$(echo "$RESPONSE" | jq -r '.message')" == "Not Found" ]; then
+            echo "Assignment failed: PR not found."
+            exit 1
+          elif [ "$(echo "$RESPONSE" | jq -r '.html_url')" != "null" ]; then
             echo "Assignment succeeded."
           else
-            echo "Assignment failed with status code: $ASSIGNMENT_STATUS"
+            echo "Assignment failed."
             exit 1
           fi
+
